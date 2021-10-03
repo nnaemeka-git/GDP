@@ -1,0 +1,125 @@
+---
+title: "West Nile Virus Data Tidying and Analysis"
+author: "Nnaemeka Okereafor"
+date: "10/3/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(stringr)
+library(tidyverse)
+```
+
+### About The Project
+
+The mean of state west nile virus infections were calculated. Percent of positive cases that developed into neuroinvasive disease per year were also calculated, as well as Percent of positive cases that developed into neuroinvasive disease per state. 
+
+
+**Read dataset from Github**
+
+```{r}
+#part 1
+pt1 <- read.csv(file="https://raw.githubusercontent.com/nnaemeka-git/global-datasets/main/west_nile_pt1.csv", sep=",")
+head(pt1)
+
+#part 2
+pt2 <- read.csv(file="https://raw.githubusercontent.com/nnaemeka-git/global-datasets/main/west_nile_pt2.csv", sep=",")
+head(pt2)
+```
+
+**Join the two datasets**
+
+```{r}
+nile_dt <- left_join(pt1,pt2,by="State")
+head(nile_dt)
+```
+
+**Replace 0 with NA**
+
+```{r}
+nile_dt[nile_dt==0] <- NA
+```
+
+**Remove the last row**
+
+```{r}
+nile_dt <- nile_dt[1:(dim(nile_dt)[1]-1),]
+```
+
+**Remove comma from Total column values**
+
+```{r}
+nile_dt$Total <- unlist(str_remove_all(nile_dt$Total, pattern=","))
+head(nile_dt)
+```
+
+**Derive number of years and mean number of westnile infections recorded**
+
+```{r}
+nile_dt$NumOfYears <- rowSums(!is.na(nile_dt[,2:22]))
+nile_dt$AvgNumOfNile <- as.numeric(nile_dt$Total)/nile_dt$NumOfYears
+head(nile_dt)
+```
+
+**Transform the Year columns with pivot long** 
+
+```{r}
+nile_long <- nile_dt %>% 
+  pivot_longer(!c("State","Total","NumOfYears","AvgNumOfNile"),names_to="Year",values_to="Count")
+nile_long$Year <- as.numeric(unlist(str_match_all(nile_long$Year,"\\d+..")))
+```
+
+
+**Percent of positive cases that developed into neuroinvasive disease per year**
+
+```{r}
+
+nile_yr <- nile_long %>%group_by(Year) %>%
+  summarise(YearTotal = sum(Count,na.rm=TRUE))
+            
+nile_perc<-mutate(nile_yr,Total = sum(YearTotal,na.rm=TRUE),
+            PercCases = round((YearTotal/Total)*100,3))%>%
+  arrange(desc(PercCases))
+nile_perc
+```
+
+**Show Graph**
+
+```{r}
+nile_perc%>% ggplot(aes(reorder(Year,PercCases),PercCases))+
+  geom_col(fill="#D77E1A")+geom_text(aes(label=PercCases),color="blue")+
+  coord_flip()+
+  labs(x="Year",y="Percent of Positive cases (%)", title="Majority of the nile virus infections happened 2003 followed by 2012.\n The year 2000, 1999 and 2001 had the least share of the infection")+theme_bw()
+
+```
+
+**Percent of positive cases that developed into neuroinvasive disease per State**
+
+```{r}
+
+nile_st <- nile_long %>%group_by(State) %>%
+  summarise(StateTotal = sum(Count,na.rm=TRUE))
+            
+
+nile_perc_st<-mutate(nile_st,Total = sum(StateTotal,na.rm=TRUE),
+            PercCases = round((StateTotal/Total)*100,3))%>%
+  arrange(desc(PercCases))
+nile_st
+nile_perc_st
+```
+
+**Show Graph**
+
+```{r}
+nile_perc_st%>% ggplot(aes(reorder(State,PercCases),PercCases))+
+  geom_col(fill="#8CD71A")+geom_text(aes(label=PercCases),color="blue")+
+  coord_flip()+
+  labs(x="State",y="Percent of Positive cases (%)", title="Califonia and colorado top the list of states with highest infections of\n 13.6% and 10.9% respectively while Puerto Rico and Hawaii had the\n least infections of 0.002% approximately")+theme_bw()
+
+```
+
+
+
+
+
