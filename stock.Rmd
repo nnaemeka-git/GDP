@@ -1,0 +1,125 @@
+---
+title: "Tidying and Exploratory Analysis of Indian stock Data"
+author: "Nnaemeka Okereafor"
+date: "10/2/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(stringr)
+library(tidyverse)
+```
+
+
+### About The Project
+
+The dataset contains data from a list of Indian stocks in NSE. It includes a collection of well performing stocks. Per Jiho Kim,The dataset contains lots of #NA and #REF observations. Find the trading high price mean and low price mean per sector and the distribution of the mean prices. Dataset source: [link](https://www.kaggle.com/souravroy1/stock-market-data/download) 
+
+**Read dataset from Github**
+
+```{r}
+stock <- read.csv(file="https://raw.githubusercontent.com/nnaemeka-git/global-datasets/main/stock%20dataset.csv", sep=",")
+as_tibble(stock)
+```
+
+**Remove #N/A and #REF! from dataset**
+
+```{r}
+stock[stock=="#N/A" | stock=="#REF!" ] <- "0"
+```
+
+
+**Convert High and Low stock price columns to numeric values**
+
+```{r}
+stock$High.Price <- as.numeric(replace(stock$High.Price,stock$High.Price=="#N/A","0"))
+stock$Low.Price <- as.numeric(replace(stock$Low.Price,stock$Low.Price=="#N/A","0"))
+stock$Sector <- replace(stock$Sector,stock$Sector%in% c("#N/A","#REF!","0"),"No sector")
+tibble(stock)
+```
+
+### *High Stock Price mean per Sector*
+
+```{r warning=FALSE}
+stock_avg <- stock %>%
+  group_by(Sector)%>%
+  summarise(HighPriceAvg=round(mean(High.Price,na.rm=TRUE),2),
+            LowPriceAvg=round(mean(Low.Price,na.rm=TRUE),2))%>%arrange(desc(HighPriceAvg))#%>%
+  #filter(Sector == "No sector")
+stock_avg
+```
+
+### *Show High stock Price Mean Distribution*
+
+```{r warning=FALSE}
+stock_avg%>%ggplot(aes(HighPriceAvg))+geom_histogram(binwidth=1500)+
+    labs(x="High Price (Rs.)",
+       title="The distribution of low stock price of indian stock is skewed to the right,\n and the data distribution contains meaningless Rs.0 low stock price \n and extreme outliers",
+       caption="Data source: https://www.kaggle.com/souravroy1/stock-market-data")+
+  theme_bw()
+
+#Remove Outlier for High Price Average
+high_no_outlier <-stock_avg%>%
+  filter(HighPriceAvg != 0 & HighPriceAvg<9000)
+
+ggplot(high_no_outlier, aes(x=HighPriceAvg))+geom_histogram(aes(y=..density..),binwidth=181)+geom_density(col = "tomato")+
+  labs(x="High Price (Rs.)",
+       title="The distribution of High stock price of indian stock is bimodal and skewed to the \n right, centered at about Rs.268 with most of the data between Rs.100 and\n Rs.250, a range of roughly Rs.1264 and a few outliers are present on the \n higher end.",
+       caption="Data source: https://www.kaggle.com/souravroy1/stock-market-data")+
+  theme_bw()
+
+#Summary statistics for high price
+summarise(high_no_outlier,mean=mean(HighPriceAvg,na.rm=TRUE),
+          median=median(HighPriceAvg,na.rm=TRUE),
+          sd=sd(HighPriceAvg,na.rm=TRUE),
+          min=min(HighPriceAvg),
+          max=max(HighPriceAvg)
+          )%>%mutate(Range=max-min)
+```
+
+
+
+### *Show Low stock Price Mean Distribution*
+
+```{r warning=FALSE}
+stock_avg%>%ggplot(aes(LowPriceAvg))+geom_histogram(binwidth=1500,fill="#DAF7A6")+
+   labs(x="Low Price (Rs.)",
+       title="The distribution of low stock price of indian stock is skewed to the right,\n and the data distribution contains meaningless Rs.0 low stock price \n and extreme outliers",
+       caption="Data source: https://www.kaggle.com/souravroy1/stock-market-data")+
+  theme_bw()
+```
+
+
+```{r warning=FALSE}
+#Remove Outlier from Lower Price Average
+low_no_outlier <- stock_avg%>%
+  filter(LowPriceAvg !=0 & LowPriceAvg<9000)
+
+
+ggplot(low_no_outlier,aes(LowPriceAvg))+geom_histogram(aes(y=..density..),binwidth=181,fill="#DAF7A6")+geom_density(col = "red")+
+ labs(x="Low Price (Rs.)",
+       title="The distribution of low stock price of indian stock is bimodal and skewed to the\n right, centered at about Rs.262 with most of the data between Rs.100 and\n Rs.250, a range of roughly Rs.1239 and a few outliers are present on the \n higher end.",
+       caption="Data source: https://www.kaggle.com/souravroy1/stock-market-data")+
+  theme_bw()
+ 
+
+
+#Summary statistics for Low price Average
+summarise(low_no_outlier,mean=mean(LowPriceAvg,na.rm=TRUE),
+          median=median(LowPriceAvg,na.rm=TRUE),
+          sd=sd(LowPriceAvg,na.rm=TRUE),
+          min=min(LowPriceAvg),
+          max=max(LowPriceAvg)
+          )%>%mutate(Range=max-min)
+
+```
+
+
+
+
+
+
+
+
+
