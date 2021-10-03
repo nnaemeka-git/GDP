@@ -1,0 +1,160 @@
+---
+title: "World Annual GDP"
+author: "Nnaemeka Okereafor"
+date: "10/3/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(stringr)
+library(tidyverse)
+```
+
+### About The Project
+
+The first 5 countries with top GDP and the last 5 countries with least GDP. Also, the prediction of average GDP of the years were xrayed. 
+
+### Read Data from Github
+
+```{r}
+df <- read.csv(file="https://raw.githubusercontent.com/nnaemeka-git/global-datasets/main/GDP%20dataset.csv", sep=",",skip=4)
+glimpse(df)
+```
+
+**Transform dataset with pivot longer**
+
+```{r}
+df_long <- df %>% 
+  pivot_longer(!c("Country.Name", "Country.Code", "Indicator.Name", "Indicator.Code"),names_to="Year",values_to="GDP")
+
+head(df_long,n=15)
+```
+
+**Get Year**
+
+```{r}
+df_long$Year <- as.numeric(unlist(str_match_all(df_long$Year,"\\d+..")))
+```
+
+**Top 5 GDP**
+
+```{r}
+df_sel_val <- df_long %>% select(Country.Name,Country.Code,Year,GDP) %>%
+  group_by(Country.Name)%>%
+  summarise(Avg_GDP=round(mean(GDP,na.rm=TRUE),2),Count=sum(!is.na(GDP)))%>%arrange(desc(Avg_GDP))%>%
+  filter(is.na(Avg_GDP) == FALSE)
+
+#Top 5
+top_5_gdp <- df_sel_val[1:5,]
+top_5_gdp
+
+top_5_gdp%>% ggplot(aes(reorder(Country.Name,Avg_GDP),Avg_GDP))+
+  geom_col(fill="#8CD71A")+geom_text(aes(label=Avg_GDP),color="blue")+ labs(x="Country (billion $)",y="GDP (billion $)", title="Equatorial Guinea has the highest average GDP of 13.67 billion dollar followed by Bosnia\n and Herzegovina with a GDP of 8.97 billion dollar")
+```
+
+**Least 5 GDP**
+
+```{r}
+
+least_5_gdp <- tail(df_sel_val,n=5)
+least_5_gdp
+
+least_5_gdp%>% ggplot(aes(reorder(Country.Name,Avg_GDP),Avg_GDP))+
+  geom_col(fill="#D77E1A")+geom_text(aes(label=Avg_GDP),color="blue")+ labs(x="Country",y="GDP (billion $)", title="South Sudan has the least average GDP with with a negative balance\n of approximately 4.9 billion. Northern Mariana Islands is the second\n least in the list of 5 lowest average GDP")
+
+```
+
+**World Average GDP Growth by Year**
+
+```{r message=FALSE, warning=FALSE, echo=FALSE}
+df_sel_val2 <- df_long %>% select(Country.Name,Country.Code,Year,GDP) %>%
+  group_by(Year)%>%
+  summarise(Avg_GDP=round(mean(GDP,na.rm=TRUE),2),CounOfGDP=sum(!is.na(GDP)))%>%arrange(desc(Avg_GDP))%>%
+  filter(is.na(Avg_GDP) == FALSE)
+
+df_sel_val2
+
+df_sel_val2 %>%ggplot(aes(x=Year,y=Avg_GDP))+
+  geom_line()+geom_text(aes(label=Avg_GDP),color="blue")+
+  labs(y="GDP (billion $)", title="Year 2020 was has the lowest average annual GDP while year 1970 delivered\n the highest average annual GDP")
+``` 
+
+### Prediction Analysis
+
+```{r}
+#Plot
+plot(df_sel_val2$Year,df_sel_val2$Avg_GDP)
+
+
+#Correlation between year and average GDP
+cor(df_sel_val2$Year,df_sel_val2$Avg_GDP)
+
+#Save model in an object
+result <- lm(Avg_GDP~Year,data=df_sel_val2)
+
+#Draw regression line
+abline(result)
+
+#Display statistics
+summary(result)
+
+#Display intercept and Slope
+result
+
+#To know the contents of result
+#names(result)
+
+#View fitted values
+#result$fitted
+
+#Plot year against fitted values
+plot(df_sel_val2$Year,result$fitted)
+
+```
+
+**Create function to predict global GDP**
+
+```{r}
+Global_GDP <-function(year){
+  GDP <- vector()
+  for (i in 1:length(year)){
+    GDP[i] <-  (result$coef[2]*year[i])+result$coef[1]
+  }
+  return(GDP)
+ }
+```
+
+**Make Prediction**
+
+```{r}
+#Predict year 1970, 1969 and 2020 using created function above
+Global_GDP(c(1970,1969,2020))
+
+#Predict year 1970, 1969 and 2020 using regression default function
+predict(result,data.frame(Year=c(1970,1969,2020)))
+
+#Make prediction for the years in the dataset
+df_sel_val2$Predicted <-Global_GDP(df_sel_val2$Year)
+df_sel_pred <- mutate(df_sel_val2,
+                      PercentDifference=((abs((df_sel_val2$Avg_GDP-df_sel_val2$Predicted))/df_sel_val2$Predicted))*100)
+
+head(df_sel_pred)
+```
+
+**To compare Year 2020 actual and predicted average GDP**
+
+```{r}
+#View the actual and predicted Average GDP for year 2020
+pred_2020 <- df_sel_pred%>% filter(Year==2020)
+pred_2020
+```
+
+
+
+
+
+
+
+
+
