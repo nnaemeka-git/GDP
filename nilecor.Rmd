@@ -1,0 +1,219 @@
+---
+title: "Westnile Virus Data Tidying and Analysis"
+author: "Nnaemeka Okereafor"
+date: "10/3/2021"
+output:
+  html_document: default
+  pdf_document: default
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(stringr)
+library(tidyverse)
+```
+
+### About The Project
+
+The means of state westnile virus and neuroinvasive cases were calculated. Percent of positive cases that developed into neuroinvasive disease per year and state and percent of the westnile disease per state and year were also calculated.
+
+**Read dataset from Github**
+
+```{r}
+#West nile disease dataset
+#part 1
+pt1 <- read.csv(file="https://raw.githubusercontent.com/nnaemeka-git/global-datasets/main/west_nile_pt1.csv", sep=",")
+head(pt1)
+
+#part 2
+pt2 <- read.csv(file="https://raw.githubusercontent.com/nnaemeka-git/global-datasets/main/west_nile_pt2.csv", sep=",")
+head(pt2)
+
+#West nile neuroinvasive dataset
+#part 1
+npt1 <- read.csv(file="https://raw.githubusercontent.com/nnaemeka-git/global-datasets/main/westnile%20neuroinvasive%20pt1.csv", sep=",")
+head(npt1)
+
+#part 2
+npt2 <- read.csv(file="https://raw.githubusercontent.com/nnaemeka-git/global-datasets/main/westnile%20neuroinvasive%20pt2.csv", sep=",")
+head(npt2)
+```
+
+
+**Join datasets**
+
+```{r}
+nile_dt <- left_join(pt1,pt2,by="State")
+neuro_dt <- left_join(npt1,npt2,by="State")
+head(nile_dt)
+head(neuro_dt)
+```
+
+**Replace 0 with NA**
+
+```{r}
+nile_dt[nile_dt==0] <- NA
+neuro_dt[neuro_dt==0] <- NA
+```
+
+**Remove the last row**
+
+```{r}
+nile_dt <- nile_dt[1:(dim(nile_dt)[1]-1),]
+neuro_dt <- neuro_dt[1:(dim(neuro_dt)[1]-1),]
+```
+
+**Remove comma from Total column values**
+
+```{r}
+nile_dt$Total <- unlist(str_remove_all(nile_dt$Total, pattern=","))
+neuro_dt$Total <- unlist(str_remove_all(neuro_dt$Total, pattern=","))
+```
+
+
+**Derive number of years and mean number of westnile infections recorded**
+
+```{r}
+nile_dt$NumOfYears <- rowSums(!is.na(nile_dt[,2:22]))
+nile_dt$AvgNumOfNile <- as.numeric(nile_dt$Total)/nile_dt$NumOfYears
+neuro_dt$NumOfYears <- rowSums(!is.na(neuro_dt[,2:22]))
+neuro_dt$AvgNumOfNeuro <- as.numeric(neuro_dt$Total)/neuro_dt$NumOfYears
+
+head(neuro_dt)
+head(nile_dt)
+```
+
+
+**Transform the Year columns with pivot long** 
+
+```{r}
+nile_long <- nile_dt %>% 
+  pivot_longer(!c("State","Total","NumOfYears","AvgNumOfNile"),names_to="DiseaseYear",values_to="DiseaseCount")
+nile_long$DiseaseYear <- as.numeric(unlist(str_match_all(nile_long$DiseaseYear,"\\d+..")))
+
+
+neuro_long <- neuro_dt %>% 
+  pivot_longer(!c("State","Total","NumOfYears","AvgNumOfNeuro"),names_to="NeuroYear",values_to="NeuroCount")
+neuro_long$NeuroYear <- as.numeric(unlist(str_match_all(neuro_long$NeuroYear,"\\d+..")))
+
+```
+
+
+**Percent of Disease and positive cases that developed into neuroinvasive disease per year**
+
+```{r}
+#Percent of Disease in each state per year
+nile_yr <- nile_long %>%group_by(DiseaseYear) %>%
+  summarise(YearTotal = sum(DiseaseCount,na.rm=TRUE))
+            
+nile_perc<-mutate(nile_yr,Total = sum(YearTotal,na.rm=TRUE),
+            PercCases = round((YearTotal/Total)*100,3))%>%
+  arrange(desc(PercCases))
+
+
+#Percent of positive cases that developed into neuroinvasive disease per year
+neuro_yr <- neuro_long %>%group_by(NeuroYear) %>%
+  summarise(YearTotal = sum(NeuroCount,na.rm=TRUE))
+            
+neuro_perc<-mutate(neuro_yr,Total = sum(YearTotal,na.rm=TRUE),
+            PercCases = round((YearTotal/Total)*100,3))%>%
+  arrange(desc(PercCases))
+
+```
+
+**Percent of Disease in each state per year**
+
+```{r}
+nile_perc
+```
+
+**Percent of positive cases that developed into neuroinvasive disease per year**
+  
+```{r}
+neuro_perc
+``` 
+
+### Show Graph
+
+**Disease Percent per year**
+
+```{r}
+nile_perc%>% ggplot(aes(reorder(DiseaseYear,PercCases),PercCases))+
+  geom_col(fill="#D77E1A")+geom_text(aes(label=PercCases),color="blue")+
+  coord_flip()+
+  labs(x="Year",y="Percent of west Nile Disease (%)", title="Majority of the westnile disease infections happened 2003 followed by 2012.\n The year 2000, 1999 and 2001 had the least share of the infection")+theme_bw()
+```
+
+**Neuroinvasive cases Percent per year**
+  
+```{r}
+neuro_perc%>% ggplot(aes(reorder(NeuroYear,PercCases),PercCases))+
+  geom_col(fill="#B92CA4")+geom_text(aes(label=PercCases),color="blue")+
+  coord_flip()+
+  labs(x="Year",y="Percent of Positive cases (%)", title="Majority of the Neuroinvasive westnile virus infections happened year 2002, \nfollowed by 2012 and 2003 with the approximately 11.6%, 11.36% and\n 11.33% respectively. The year 2000, 1999 and 2001 had the least share of the\n infection")+theme_bw()
+
+```
+
+**Percent of Disease and positive cases that developed into neuroinvasive disease per state**
+
+```{r}
+#Percent of Disease in each state per state
+
+nile_st <- nile_long %>%group_by(State) %>%
+  summarise(StateTotal = sum(DiseaseCount,na.rm=TRUE))
+            
+
+nile_perc_st<-mutate(nile_st,Total = sum(StateTotal,na.rm=TRUE),
+            PercCases = round((StateTotal/Total)*100,3))%>%
+  arrange(desc(PercCases))
+
+
+#Percent of positive cases that developed into neuroinvasive disease per state
+neuro_st <- neuro_long %>%group_by(State) %>%
+  summarise(StateTotal = sum(NeuroCount,na.rm=TRUE))
+            
+
+neuro_perc_st<-mutate(neuro_st,Total = sum(StateTotal,na.rm=TRUE),
+            PercCases = round((StateTotal/Total)*100,3))%>%
+  arrange(desc(PercCases))
+
+```
+
+**Percent of Disease in each state per state**
+
+```{r}
+nile_perc_st
+```
+
+**Percent of positive cases that developed into neuroinvasive disease per state**
+  
+```{r}
+neuro_perc_st
+```  
+ 
+ 
+### Show Graph  
+
+
+**Disease Percent per State**
+
+```{r}
+nile_perc_st%>% ggplot(aes(reorder(State,PercCases),PercCases))+
+  geom_col(fill="#8CD71A")+geom_text(aes(label=PercCases),color="blue")+
+  coord_flip()+
+  labs(x="State",y="Percent of westnile disease (%)", title="Califonia and colorado top the list of states with highest infections of\n 13.6% and 10.9% respectively while Puerto Rico and Hawaii had the\n least infections of 0.002% approximately")+theme_bw()
+```
+
+**Neuroinvasive cases Percent per State**
+
+```{r} 
+neuro_perc_st%>% ggplot(aes(reorder(State,PercCases),PercCases))+
+  geom_col(fill="#8A8F80")+geom_text(aes(label=PercCases),color="blue")+
+  coord_flip()+
+  labs(x="State",y="Percent of Positive cases (%)", title="Califonia and Texas top the list of states with highest Neuroinvasive\n westnile cases of 16.18% and 13.4% respectively while Puerto Rico,\n Aaska and Hawaii had the least infections of 0.004%, 0.004% and 0.0%\n approximately")+theme_bw()
+
+```
+
+
+
