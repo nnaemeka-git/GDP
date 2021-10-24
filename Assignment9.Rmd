@@ -1,0 +1,106 @@
+---
+title: "New York Times Web API"
+author: "Nnaemeka Okereafor"
+date: "10/24/2021"
+output: rmdformats::readthedown 
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(tidyverse)
+library(jsonlite)
+library(httr)
+library(kableExtra)
+```
+
+### About the Assignment
+
+In the Assignment I created an API key for New York Times database to read articles. Amongst the numerous articles, I chose to request for the most viewed articles for the last seven days.The response was received as a JSON data which I converted into a dataframe.
+
+### Approach
+
+I signed up with the New York Times and created an API key to enable me send a request to the New York Times server through the *GET()* function of the *httr* package and the response was saved in an object named *article*. The object was displayed to view its status, content-type, date and etc. The status was 200 and the content-type was in application/json format. The status and content information signified that there was a connection for the server to send the json formatted request. I displayed the header to have an overview of the *article* object. Then the unicode formatted content of the object was converted to a character vector with the *content()* function parsed with *as* argument equals *text* before parsing it the *fromJSON()* function. The *fromJSON()* function converts the json formatted content into a dataframe of articles, copyright, number of articles, and status.
+
+
+### Send Request to get most viewed articles for the last seven days and save the response in a variable
+
+```{r pressure, echo=TRUE}
+url_viewed <-"https://api.nytimes.com/svc/mostpopular/v2/viewed/1.json?api-key=jsWenA4LsyGDPE3LOkNnt4kxlQbG1clD"
+article <- GET(url_viewed)
+```
+
+### Display response
+
+```{r}
+article
+```
+ 
+ 
+```{r}
+article_header <- article$headers
+article_header
+
+```
+
+### View the unicode
+
+```{r}
+str(article$content)
+```
+
+### Convert the unicode to character vector
+
+```{r}
+nyt_article<-content(article, as="text")
+#nyt_article
+```
+
+### Parse the character vector into a fromJSON to convert it to a list
+
+```{r}
+nyt_articlent_json<-nyt_article %>% fromJSON
+#glimpse(nyt_articlent_json)
+```
+
+The glimpse() was called to unbundle the content of the nyt_articlent_json list to view its elements. The list contains four elements, namely-status, copyright, num_results and results dataframe. 
+
+
+### status
+
+```{r}
+nyt_articlent_json$status
+
+```
+
+### copyright
+
+```{r}
+nyt_articlent_json$copyright
+
+```
+
+### Number of observations
+
+```{r}
+nyt_articlent_json$num_results
+
+```
+
+### Articles
+
+```{r}
+samp_article<-nyt_articlent_json$results
+
+kbl(samp_article)%>%
+  kable_styling() %>% kable_paper("hover", full_width = F)
+
+```
+
+
+### Conclusion
+
+It is a nice assignment for students of data science in the age of globalization. I learnt a lot in the assignment and I recommend that anyone in quest to learn data science should avail himself to learn about APIs. Now, I have the opportunity to view the most viewed article of any week in the comfort of my home with a click of my computer mouse.
+
+
+
