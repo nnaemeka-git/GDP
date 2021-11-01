@@ -1,0 +1,241 @@
+---
+title: "Sentiment Analysis"
+author: "Nnaemeka Okereafor"
+date: "10/31/2021"
+output: rmdformats::readthedown 
+---
+
+```{r setup, warning=TRUE, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r warning=FALSE, include=FALSE}
+library(tidyverse)
+library(tidytext)
+library(widyr)
+library(textdata)
+library(janeaustenr)
+library(readr)
+library(igraph)
+library(ggraph)
+library(stringr)
+
+library(reshape2)
+library(kableExtra)
+
+```
+
+### About the Assignment
+
+The assignment is to perform sentiment analysis by re-creating and analyzing primary code from chapter 2 of the book Text Mining With R by Julia Silge and David Robinson with different corpus and additional lexicon with recommendations based on the findings.
+
+### Overview of Approach
+
+I read the movies review data set with 5000 observations and 2 variables from the link: <https://raw.githubusercontent.com/nnaemeka-git/global-datasets/main/sentdata.csv> to make the assignment reproducible. I created row numbers to track each row of the dataset and performed tokenization to achieve the *One-word-per-row-format* rule. Then I sampled some *Joy* words in the movie reviews, analysed differences in sentiment of words in the review as used by different revewers at different points. I also compared the result of the sentiment analysis with four different lexicons. 
+
+### Read Movie reviews
+
+```{r}
+url<-"https://raw.githubusercontent.com/nnaemeka-git/global-datasets/main/sentdata.csv"
+text_df <- read_csv(url)
+head(text_df)
+```
+
+
+### Create row numbers to track rows
+
+```{r}
+text_df<-text_df %>%mutate(linenumber=row_number()) %>%
+  unnest_tokens(word, text)
+text_df
+```
+
+### Sample afinn lexicon
+
+```{r}
+kbl(head(get_sentiments("afinn"),n=20)) %>%
+  kable_styling() %>% kable_paper("hover", full_width = F)
+```
+
+### Sample bing lexicon
+
+```{r}
+kbl(head(get_sentiments("bing"),n=20)) %>%
+kable_styling() %>% kable_paper("hover", full_width = F)
+```
+### Sample nrc lexicon
+
+```{r}
+kbl(head(get_sentiments("nrc"),n=20)) %>%
+kable_styling() %>% kable_paper("hover", full_width = F)
+```
+### Sample loughran lexicon
+
+```{r}
+kbl(head(get_sentiments("loughran"),n=20)) %>%
+kable_styling() %>% kable_paper("hover", full_width = F)
+```
+
+
+
+
+### The most common joy words in movie review
+
+```{r}
+nrc_joy<-nrc_joy <- get_sentiments("nrc") %>% 
+  filter(sentiment == "joy")
+dim(nrc_joy)
+
+text_joy<-text_df %>%
+  inner_join(nrc_joy) %>%
+  count(word, sort = TRUE)
+
+#Subset of joy words
+
+kbl(head(text_joy,n=30)) %>%
+kable_styling() %>% kable_paper("hover", full_width = F)
+```
+
+### To estimate sentiment changes or differences
+
+```{r}
+text_sentiment <- text_df %>%
+  inner_join(get_sentiments("bing"))
+text_sentiment
+```
+
+
+```{r}
+text_sentiment_wider <- text_sentiment %>%
+  inner_join(get_sentiments("bing")) %>%
+  count(word, index = linenumber %/% 80, sentiment) %>%
+  pivot_wider(names_from = sentiment, values_from = n, values_fill = 0) %>% 
+  mutate(sentiment = positive - negative)
+
+text_sentiment_wider
+```
+
+
+```{r}
+ggplot(text_sentiment_wider, aes(index, sentiment)) +
+  geom_col(show.legend = FALSE,fill=("#CF7F1A"))
+```
+
+
+
+
+### Comparing the Four sentiment dictionaries
+
+```{r}
+
+afinn <- text_df %>% 
+  inner_join(get_sentiments("afinn")) %>% 
+  group_by(index = linenumber %/% 80) %>% 
+  summarise(sentiment = sum(value)) %>% 
+  mutate(method = "AFINN")
+
+bing_and_nrc <- bind_rows(
+  text_df %>% 
+    inner_join(get_sentiments("bing")) %>%
+    mutate(method = "Bing et al."),
+  text_df %>% 
+    inner_join(get_sentiments("loughran")) %>%
+    mutate(method = "loughran"),
+  text_df %>% 
+    inner_join(get_sentiments("nrc") %>% 
+                 filter(sentiment %in% c("positive", 
+                                         "negative"))
+    ) %>%
+    mutate(method = "NRC")) %>%
+  count(method, index = linenumber %/% 80, sentiment) %>%
+  pivot_wider(names_from = sentiment,
+              values_from = n,
+              values_fill = 0) %>% 
+  mutate(sentiment = positive - negative)
+```
+
+
+```{r}
+bind_rows(afinn, 
+          bing_and_nrc) %>%
+  ggplot(aes(index, sentiment, fill = method)) +
+  geom_col(show.legend = FALSE) +
+  facet_wrap(~method, ncol = 1, scales = "free_y")
+```
+
+
+### Most common positive and negative words
+
+```{r}
+bing_word_counts <- text_df %>%
+  inner_join(get_sentiments("bing")) %>%
+  count(word, sentiment, sort = TRUE) %>%
+  ungroup()
+
+bing_word_counts
+
+```
+
+```{r}
+bing_word_counts %>%filter(word!="br")%>%
+  group_by(sentiment) %>%
+  slice_max(n, n = 10) %>% 
+  ungroup() %>%
+  mutate(word = reorder(word, n)) %>%
+  ggplot(aes(n, word, fill = sentiment)) +
+  geom_col(show.legend = FALSE) +
+  facet_wrap(~sentiment, scales = "free_y") +
+  labs(x = "Contribution to sentiment",
+       y = NULL)
+
+```
+
+### Wordclouds
+
+```{r}
+library(wordcloud)
+
+text_df %>%filter(word!="br")%>%
+  anti_join(stop_words) %>%
+  count(word) %>%
+  with(wordcloud(word, n, max.words = 100))
+
+```
+
+```{r}
+text_df %>%
+  inner_join(get_sentiments("bing")) %>%
+  count(word, sentiment, sort = TRUE) %>%
+  acast(word ~ sentiment, value.var = "n", fill = 0) %>%
+  comparison.cloud(colors = c("gray20", "gray80"),
+                   max.words = 100)
+```
+
+### Conclusion
+
+Sentiment analysis provides a way to understand the attitudes and opinions expressed in texts (Julia Silge and David Robinson, July 18, 2017). From my analysis words like films, story, movie, character and people are most prevalent in the reviews given by the reviewers. Bad, plot, funny, hard, worst, death, stupid, awful and wrong are the most common negative words. While like, good, well, great, well, best, love, better, work, enough, and pretty are the most persistent positive words used by reviewers. Note that the **Bing et al lexicon** appeared to be most useful to analyse movie reviews because it displayed both negative and positive sentiments as indicated in the sentiment plot above.
+
+### References
+
++ **Julia Silge and David Robinson(July 18, 2017). Text Mining With R. Chapter 2: Sentiment analysis with tidy data**
++ **https://www.tidytextmining.com/sentiment.html**
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
