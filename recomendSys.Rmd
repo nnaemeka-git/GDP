@@ -1,0 +1,104 @@
+---
+title: "Netflix Recommender Sytem Scenario Design Analysis"
+author: "Nnaemeka Okereafor"
+output:
+   # pdf_document: #default
+  prettydoc::html_pretty:
+  html_document:
+    includes:
+      in_header: header.html
+    css: ./lab.css
+    highlight: github #pygments
+    theme: architect #cerulean
+    toc: true
+    toc_float: true
+editor_options: 
+  chunk_output_type: console
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+### **Overview of Netflix Recommender system**
+
+Netflix is the world’s leading Internet television network and the most-valued largest streaming service in the world. The amazing digital success story of Netflix is incomplete without the mention of its recommender systems that focus on personalization. The main goal of Netflix is to provide personalized recommendations by showing the apt titles to each of the viewers at the right time. Though, viewers care about the titles Netflix recommends and get convinced that a title is worth watching and also have their attention caught by new and unfamiliar titles through artwork personalization or thumbnails personalization that portray the titles. However, The service uses the preference from other users who have similar interests as others, that is, people who watch the same kind of shows and movies. 
+
+### **Netflix as a Business**
+
+Netflix has a subscription-based model. The subscribers pay a certain fee amount based on the chosen suscription plan namely, basic, standard and premium. The more members or users or subscribers Netflix has, the higher its revenue. Revenue can be seen as a function of three things namely, *acquisition rate of new users*, *cancellation rates* and *rate at which former members rejoin*.
+
+### **Target Users**
+
+The Netflix target users or members are individuals who are interested in seeing movies and TV Shows online
+
+### **What are their key goals**
+
+The ultimate goal of Netflix should be to facilitate a system to help users to access movies and TV Shows they want and derive value
+
+
+### **How can Netflix help them accomplish those goals?**
+
++ Making available as many as possible movies and TV Shows on their online databse which be accessed online and timely
+
++ Building scalable systems that recommends movies and TV Shows to existing and new subscribers to Netflix
+
+
+### **Netflix Recommender System algorithms**
+
+Netflix uses different algorithms in its recommender system which can be referred to as rankers according to *netflixtechblog.com* of which they did not disclose the specifics of each model’s architecture. Highlighted are few algorithms utilized by Netflix to recommend movies to their users.
+
++ ***Personalised Video Ranking (PVR)*** - 
+This algorithm is a general-purpose one, which usually filters down the catalog by a certain criteria such as Violent TV Programmes, US TV shows, Romance and others combined with side features including user features and popularity.
+
++ ***Top-N Video Ranker*** -
+Similar to PVR except that it only looks at the head of the rankings and looks at the entire catalog. It is optimised using metrics that look at the head of the catalog rankings.
+
++ ***Trending Now Ranker*** -
+This algorithm captures secular trends which Netflix deduces to be strong predictors. These short-term trends can range from a few minutes a few days. These events/trends are typically events that have a seasonal trend and repeat themselves such as Valentine’s Day leads to an uptick in Romance videos being consumed secondly, One-off, short term events such as Coronavirus or other disasters, leading to short-term interest in documentaries about them.
+
++ ***Continue Watching Ranker*** -
+This algorithm looks at items that the member has consumed but has not completed, typically Episodic content such as drama series and non-episodic content that can be consumed in small bites such as movies that are half-completed, series that are episode independent such as Black Mirror. The algorithm calculates the probability of the member to continue watching and includes other context-aware signals such as time elapsed since viewing, point of abandonment, device watched on and others
+
++ ***Video-Video Similarity Ranker*** - 
+This algorithm basically resembles that of a content-based filtering algorithm. Based on an item consumed by the member, the algorithm computes other similar items (using an item-item similarity matrix) and returns the most similar items. Amongst the other algorithms, this one is unpersonalised as no other side features are utilised. However, it is personalised in the sense that it is a conscious choice to display a particular item’s similar items a member’s homepage.
+
+
+### **Improving Netflix Recommender system**
+
++ Netflix should constantly encourage, train/enlighten subscribers about how participating in Netflix survey will impact the type of movies that is being recommended to them 
++ Create surveys that appears as popups that takes a second to respond to in order to obtain users rating about every movie or TV Show they watch to build their preference data from users
++ Netflix should give discount and engage promotions to encourage users to logon with or use their own profile to watch movies or shows
+
+
+### **Reference**
+
++ Netflix.com
++ https://github.com/yanneta/pytorch-tutorials/blob/master/collaborative-filtering-nn.ipynb
++ https://netflixtechblog.com/learning-a-personalized-homepage-aa8ec670359a
++ https://slideslive.com/38917692/recent-trends-in-personalization-a-netflix-perspective
++ https://netflixtechblog.com/its-all-a-bout-testing-the-netflix-experimentation-platform-4e1ca458c15
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
